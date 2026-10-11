@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Helsinki Gigs Tracker</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            surface: {
+              DEFAULT: '#0f1115',
+              card: '#161922',
+              cardHover: '#1c202c',
+              border: '#232736',
+              input: '#0b0d11',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0b0d11;
+      color: #f1f5f9;
+      -webkit-font-smoothing: antialiased;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #232736;
+      border-radius: 4px;
+    }
+    .badge-glow-high {
+      box-shadow: 0 0 12px -2px rgba(16, 185, 129, 0.4);
+    }
+    .badge-glow-mid {
+      box-shadow: 0 0 12px -2px rgba(245, 158, 11, 0.35);
+    }
+
+    /* Clean Native Date Picker Button (Calendar Only, No Text Typing) */
+    .date-picker-btn {
+      position: relative;
+      cursor: pointer;
+    }
+    .date-picker-btn input[type="date"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-amber-500/20 selection:text-amber-300">
+
+  <!-- Top Glassmorphism Navigation Bar -->
+  <header class="sticky top-0 z-50 bg-[#0f1115]/95 backdrop-blur-xl border-b border-surface-border">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="resetFilters()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-black font-extrabold shadow-lg shadow-amber-500/20">
+          <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            Helsinki Gigs
+          </h1>
+          <p class="text-[11px] text-slate-400 font-medium hidden sm:block">Underground • Metal • Rock • Acoustic</p>
+        </div>
+      </div>
+
+      <!-- Header Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button
+          id="btnNotificationSettings"
+          onclick="togglePreferencesModal()"
+          class="bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-amber-500/10 hover:from-amber-500/30 hover:to-amber-400/20 border border-amber-500/50 text-amber-300 hover:text-amber-200 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer ring-1 ring-amber-400/20"
+        >
+          <span class="text-base sm:text-lg">🔔</span>
+          <span class="font-bold">Preferences & Alerts</span>
+        </button>
+
+        <div id="statsBadge" class="font-mono text-xs bg-surface-card border border-surface-border text-amber-400 px-3 py-2 rounded-xl flex items-center gap-1.5 font-medium shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span class="hidden sm:inline">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Gigs Container -->
+  <main id="gigsView" class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Natural Language Search Card -->
+    <div class="relative overflow-hidden bg-gradient-to-br from-[#161922] to-[#12141c] border border-surface-border rounded-2xl p-4 sm:p-6 shadow-xl">
+      <div class="relative z-10 space-y-3">
+        <div class="flex items-center justify-between">
+          <label for="nlSearch" class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <span>✨</span> Ask AI Search
+          </label>
+          <span class="text-[11px] text-slate-400">Smart Search</span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <div class="relative flex-1">
+            <input
+              id="nlSearch"
+              type="text"
+              placeholder="e.g. 'doom or death metal in Tavastia' or 'any math rock shows?'"
+              class="w-full bg-surface-input border border-surface-border rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 transition-all font-medium"
+              onkeydown="if(event.key==='Enter') handleNlSearch()"
+            />
+          </div>
+          <button
+            onclick="handleNlSearch()"
+            id="btnSearch"
+            class="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all shadow-md shadow-amber-500/10 active:scale-[0.98] flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+            Ask AI
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter & Sort Control Panel -->
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-5">
+
+      <div class="flex items-center justify-between pb-3 border-b border-surface-border">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-200">Filters & Sorting</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="applyUserPreferencesAsFilters()" class="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer flex items-center gap-1">
+            <span>⚙️</span> Apply Defaults
+          </button>
+          <button onclick="resetFilters()" class="text-xs text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Row: Sort, Region, Relevance Slider -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
+
+        <!-- 1. Sort By -->
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Sort Order</label>
+          <select id="sortSelect" onchange="fetchGigs()" class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+            <option value="date_asc">📅 Soonest first</option>
+            <option value="date_desc">📅 Furthest first</option>
+            <option value="score_desc">🔥 Highest relevance first</option>
+            <option value="score_asc">❄️ Lowest relevance first</option>
+          </select>
+        </div>
+
+        <!-- 2. Region Filter -->
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Location</label>
+          <select id="citySelect" onchange="fetchGigs()" class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+            <option value="">All Regions</option>
+            <option value="Helsinki">Helsinki</option>
+            <option value="Espoo">Espoo</option>
+            <option value="Vantaa">Vantaa</option>
+          </select>
+        </div>
+
+        <!-- 3. Clean Custom Relevance Slider -->
+        <div class="space-y-1 sm:col-span-2 lg:col-span-1">
+          <div class="flex justify-between items-center text-[11px]">
+            <span class="font-semibold text-slate-400 uppercase tracking-wider">Min Relevance</span>
+            <span id="scoreVal" class="font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">40%</span>
+          </div>
+          <input
+            type="range"
+            id="scoreSlider"
+            min="0"
+            max="100"
+            value="40"
+            step="5"
+            oninput="document.getElementById('scoreVal').innerText = this.value + '%'"
+            onchange="fetchGigs();"
+            class="w-full accent-amber-400 h-1.5 bg-surface-input rounded-lg cursor-pointer mt-1"
+          />
+        </div>
+
+      </div>
+
+      <!-- Date Period: Pure Calendar Selection (No Manual Text Typing) -->
+      <div class="pt-3 border-t border-surface-border/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Time Period</span>
+
+        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <!-- Start Date Button -->
+          <div class="date-picker-btn flex-1 sm:flex-initial bg-surface-input hover:bg-slate-800/80 border border-surface-border rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all">
+            <span class="text-amber-400">📅</span>
+            <span id="dateFromLabel" class="text-slate-300 font-medium">From: Any</span>
+            <input type="date" id="dateFrom" onchange="onDateChanged('from')" />
+          </div>
+
+          <span class="text-slate-500 font-bold">→</span>
+
+          <!-- End Date Button -->
+          <div class="date-picker-btn flex-1 sm:flex-initial bg-surface-input hover:bg-slate-800/80 border border-surface-border rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all">
+            <span class="text-amber-400">📅</span>
+            <span id="dateToLabel" class="text-slate-300 font-medium">Until: Any</span>
+            <input type="date" id="dateTo" onchange="onDateChanged('to')" />
+          </div>
+
+          <!-- Quick Clear Dates Button (if selected) -->
+          <button id="btnClearDates" onclick="clearDates()" class="text-xs text-slate-400 hover:text-amber-400 px-2 py-1 transition-colors hidden">
+            ✕ Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Clean Visual Genre Filter Grid -->
+      <div class="pt-3 border-t border-surface-border/60 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 cursor-pointer select-none" onclick="toggleMainGenresDropdown()">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Genres</span>
+            <span id="genreCountBadge" class="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">All</span>
+            <span id="genreToggleArrow" class="text-xs text-slate-400">▼</span>
+          </div>
+          <div class="space-x-2 text-[11px]">
+            <button type="button" onclick="selectAllMainGenres(true)" class="text-amber-400 hover:underline">Select all</button>
+            <span class="text-slate-600">•</span>
+            <button type="button" onclick="selectAllMainGenres(false)" class="text-slate-400 hover:underline">Clear</button>
+          </div>
+        </div>
+
+        <div id="mainGenresGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 p-2.5 bg-surface-input rounded-xl border border-surface-border max-h-48 overflow-y-auto custom-scrollbar transition-all">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Active Gigs Grid (Cards) -->
+    <div id="gigList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-surface-card border border-surface-border rounded-2xl p-5 h-48 animate-pulse"></div>
+      <div class="bg-surface-card border border-surface-border rounded-2xl p-5 h-48 animate-pulse"></div>
+    </div>
+
+  </main>
+
+  <!-- Preferences & Notification Settings Modal -->
+  <div id="prefsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden">
+    <div class="bg-surface-card border border-surface-border rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar">
+
+      <div class="flex items-center justify-between border-b border-surface-border pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🔔</span>
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white">Notification Preferences</h2>
+            <p class="text-[11px] text-slate-400">Configure your personal telegram alerts</p>
+          </div>
+        </div>
+        <button onclick="togglePreferencesModal()" class="text-slate-400 hover:text-white text-xl p-1 font-bold">✕</button>
+      </div>
+
+      <!-- 0. Master Alerts Toggle -->
+      <div class="flex items-center justify-between p-3 bg-surface-input border border-surface-border rounded-xl">
+        <div>
+          <span class="text-xs font-bold text-white block">Automatic Telegram Alerts</span>
+          <span class="text-[11px] text-slate-400">Receive weekly messages about new matching shows</span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="prefActiveToggle" class="sr-only peer" />
+          <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-400"></div>
+        </label>
+      </div>
+
+      <!-- 1. Preferred Notification Days -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold uppercase tracking-wider text-amber-400">Weekly Alert Schedule</label>
+        </div>
+        <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 text-xs" id="daysCheckboxGrid">
+          <label class="flex flex-col items-center justify-center p-2 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefDay" value="mon" class="accent-amber-400 mb-1" />
+            <span class="font-semibold text-slate-200">Mon</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefDay" value="tue" class="accent-amber-400 mb-1" />
+            <span class="font-semibold text-slate-200">Tue</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefDay" value="wed" class="accent-amber-400 mb-1" />
+            <span class="font-semibold text-slate-200">Wed</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefDay" value="thu" class="accent-amber-400 mb-1" />
+            <span class="font-semibold text-slate-200">Thu</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefDay" value="fri" class="accent-amber-400 mb-1" checked />
+            <span class="font-semibold text-amber-400">Fri</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefDay" value="sat" class="accent-amber-400 mb-1" />
+            <span class="font-semibold text-slate-200">Sat</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefDay" value="sun" class="accent-amber-400 mb-1" checked />
+            <span class="font-semibold text-amber-400">Sun</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. Location Areas -->
+      <div class="space-y-2">
+        <label class="text-xs font-bold uppercase tracking-wider text-amber-400 block">Locations</label>
+        <div class="grid grid-cols-3 gap-2 text-xs" id="locationsCheckboxGrid">
+          <label class="flex items-center gap-2 bg-surface-input border border-surface-border rounded-xl p-2.5 cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefLoc" value="Helsinki" class="accent-amber-400" checked />
+            <span class="font-semibold text-slate-200">Helsinki</span>
+          </label>
+          <label class="flex items-center gap-2 bg-surface-input border border-surface-border rounded-xl p-2.5 cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefLoc" value="Espoo" class="accent-amber-400" checked />
+            <span class="font-semibold text-slate-200">Espoo</span>
+          </label>
+          <label class="flex items-center gap-2 bg-surface-input border border-surface-border rounded-xl p-2.5 cursor-pointer hover:border-amber-400/50">
+            <input type="checkbox" name="prefLoc" value="Vantaa" class="accent-amber-400" checked />
+            <span class="font-semibold text-slate-200">Vantaa</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3. Minimum Relevance Score -->
+      <div class="space-y-1.5">
+        <div class="flex justify-between items-center text-xs">
+          <label class="font-bold uppercase tracking-wider text-amber-400">Min Relevance</label>
+          <span id="prefScoreVal" class="font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">40%</span>
+        </div>
+        <input
+          type="range"
+          id="prefScoreSlider"
+          min="10"
+          max="95"
+          value="40"
+          step="5"
+          oninput="document.getElementById('prefScoreVal').innerText = this.value + '%'"
+          class="w-full accent-amber-400 h-1.5 bg-surface-input rounded-lg cursor-pointer"
+        />
+      </div>
+
+      <!-- 4. Target Genres -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold uppercase tracking-wider text-amber-400">Genres of Interest</label>
+          <div class="space-x-2 text-[11px]">
+            <button type="button" onclick="selectAllPrefGenres(true)" class="text-amber-400 hover:underline">Select all</button>
+            <span class="text-slate-600">•</span>
+            <button type="button" onclick="selectAllPrefGenres(false)" class="text-slate-400 hover:underline">Clear</button>
+          </div>
+        </div>
+        <div id="genresCheckboxGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto p-2.5 bg-surface-input rounded-xl border border-surface-border custom-scrollbar">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-surface-border">
+        <button
+          onclick="togglePreferencesModal()"
+          class="bg-surface-border hover:bg-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          onclick="saveUserPreferences()"
+          id="btnSavePrefs"
+          class="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+        >
+          Save Preferences
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-surface-card border border-amber-500/40 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2">
+    <span id="toastMsg">Action complete</span>
+  </div>
+
+  <script>
+    const DEFAULT_GENRES = [
+      "Hardcore", "Post-Hardcore", "Screamo", "Emo",
+      "Punk", "Pop-Punk", "Post-Punk",
+      "Indie Rock", "Progressive Metal", "Post-Metal", "Avantgarde Metal", "Black Metal",
+      "Death Metal", "Doom Metal", "Sludge Metal", "Heavy Metal", "Thrash Metal",
+      "Power Metal", "Gothic Metal", "Symphonic Metal", "Industrial Metal",
+      "Melodic Death Metal", "Progressive Rock", "Art Rock", "Post-Rock",
+      "Noise Rock", "Math Rock", "Stoner Rock", "Psychedelic Rock",
+      "Alternative Rock", "Hard Rock", "Grunge", "Shoegaze", "Darkwave",
+      "Singer-Songwriter", "Folk", "Acoustic"
+    ];
+
+    let allAvailableGenres = [...DEFAULT_GENRES];
+    let userPreferences = null;
+
+    // Telegram Web App SDK
+    const tg = window.Telegram?.WebApp;
+    let currentChatId = "46340594";
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.initDataUnsafe?.user?.id) {
+        currentChatId = String(tg.initDataUnsafe.user.id);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toastMsg").innerText = msg;
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 3000);
+    }
+
+    function togglePreferencesModal() {
+      const modal = document.getElementById("prefsModal");
+      modal.classList.toggle("hidden");
+    }
+
+    let mainGenresOpen = true;
+    function toggleMainGenresDropdown() {
+      mainGenresOpen = !mainGenresOpen;
+      const grid = document.getElementById("mainGenresGrid");
+      const arrow = document.getElementById("genreToggleArrow");
+      if (mainGenresOpen) {
+        grid.style.display = "grid";
+        arrow.innerText = "▼";
+      } else {
+        grid.style.display = "none";
+        arrow.innerText = "▶";
+      }
+    }
+
+    function selectAllMainGenres(select) {
+      const cbs = document.querySelectorAll("#mainGenresGrid input[type='checkbox']");
+      cbs.forEach(cb => cb.checked = select);
+      updateMainGenreBadge();
+      fetchGigs();
+    }
+
+    function selectAllPrefGenres(select) {
+      const cbs = document.querySelectorAll("#genresCheckboxGrid input[type='checkbox']");
+      cbs.forEach(cb => cb.checked = select);
+    }
+
+    function updateMainGenreBadge() {
+      const total = document.querySelectorAll("#mainGenresGrid input[type='checkbox']").length;
+      const checked = document.querySelectorAll("#mainGenresGrid input[type='checkbox']:checked").length;
+      const badge = document.getElementById("genreCountBadge");
+      if (checked === 0 || checked === total) {
+        badge.innerText = "All";
+      } else {
+        badge.innerText = `${checked} active`;
+      }
+    }
+
+    function onDateChanged(type) {
+      const dateVal = document.getElementById(type === "from" ? "dateFrom" : "dateTo").value;
+      const label = document.getElementById(type === "from" ? "dateFromLabel" : "dateToLabel");
+      const prefix = type === "from" ? "From: " : "Until: ";
+
+      if (dateVal) {
+        // Format to readable format e.g. 15 Oct
+        const [y, m, d] = dateVal.split("-");
+        label.innerText = `${prefix}${parseInt(d, 10)}.${parseInt(m, 10)}.`;
+        document.getElementById("btnClearDates").classList.remove("hidden");
+      } else {
+        label.innerText = `${prefix}Any`;
+      }
+      fetchGigs();
+    }
+
+    function clearDates() {
+      document.getElementById("dateFrom").value = "";
+      document.getElementById("dateTo").value = "";
+      document.getElementById("dateFromLabel").innerText = "From: Any";
+      document.getElementById("dateToLabel").innerText = "Until: Any";
+      document.getElementById("btnClearDates").classList.add("hidden");
+      fetchGigs();
+    }
+
+    function renderGenresUI(genres) {
+      // 1. Render pills on main page
+      const mainGrid = document.getElementById("mainGenresGrid");
+      mainGrid.innerHTML = genres.map(g => `
+        <label class="flex items-center gap-1.5 text-[11px] text-slate-300 hover:text-white cursor-pointer select-none bg-[#12141c] hover:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-surface-border/60 transition-all">
+          <input type="checkbox" name="mainGenreCb" value="${g}" onchange="updateMainGenreBadge(); fetchGigs();" class="accent-amber-400 rounded cursor-pointer" />
+          <span class="truncate">${g}</span>
+        </label>
+      `).join("");
+      updateMainGenreBadge();
+
+      // 2. Preferences modal checkboxes
+      const grid = document.getElementById("genresCheckboxGrid");
+      grid.innerHTML = genres.map(g => `
+        <label class="flex items-center gap-2 text-[11px] text-slate-300 hover:text-white cursor-pointer select-none bg-[#12141c] p-2 rounded-lg border border-surface-border/50">
+          <input type="checkbox" value="${g}" class="accent-amber-400 rounded" />
+          <span class="truncate">${g}</span>
+        </label>
+      `).join("");
+    }
+
+    async function loadAvailableGenres() {
+      renderGenresUI(DEFAULT_GENRES); // Immediate render
+      try {
+        const res = await fetch("/api/available-genres");
+        if (res.ok) {
+          const fetched = await res.json();
+          if (Array.isArray(fetched) && fetched.length > 0) {
+            allAvailableGenres = fetched;
+            renderGenresUI(allAvailableGenres);
+          }
+        }
+      } catch (e) {
+        console.warn("Using fallback genres:", e);
+      }
+    }
+
+    async function loadUserPreferences() {
+      try {
+        const res = await fetch(`/api/user-preferences/${currentChatId}`);
+        if (res.ok) {
+          userPreferences = await res.json();
+          populatePreferencesModal(userPreferences);
+          applyUserPreferencesAsFilters(false);
+        }
+      } catch (e) {
+        console.warn("Could not load user preferences:", e);
+      }
+    }
+
+    function populatePreferencesModal(prefs) {
+      if (!prefs) return;
+
+      document.getElementById("prefActiveToggle").checked = Boolean(prefs.is_active);
+
+      const days = prefs.notification_days || ["fri"];
+      document.querySelectorAll("input[name='prefDay']").forEach(cb => {
+        cb.checked = days.includes(cb.value);
+      });
+
+      const locs = prefs.locations || ["Helsinki", "Espoo", "Vantaa"];
+      document.querySelectorAll("input[name='prefLoc']").forEach(cb => {
+        cb.checked = locs.includes(cb.value);
+      });
+
+      const score = prefs.min_score !== undefined ? prefs.min_score : 40;
+      document.getElementById("prefScoreSlider").value = score;
+      document.getElementById("prefScoreVal").innerText = score + "%";
+
+      const userGenres = prefs.genres || [];
+      document.querySelectorAll("#genresCheckboxGrid input[type='checkbox']").forEach(cb => {
+        cb.checked = userGenres.includes(cb.value);
+      });
+    }
+
+    function applyUserPreferencesAsFilters(shouldFetch = true) {
+      if (!userPreferences) return;
+
+      if (userPreferences.min_score !== undefined) {
+        document.getElementById("scoreSlider").value = userPreferences.min_score;
+        document.getElementById("scoreVal").innerText = userPreferences.min_score + "%";
+      }
+
+      if (userPreferences.locations && userPreferences.locations.length === 1) {
+        document.getElementById("citySelect").value = userPreferences.locations[0];
+      } else {
+        document.getElementById("citySelect").value = "";
+      }
+
+      const userGenres = userPreferences.genres || [];
+      if (userGenres.length > 0) {
+        document.querySelectorAll("#mainGenresGrid input[type='checkbox']").forEach(cb => {
+          cb.checked = userGenres.includes(cb.value);
+        });
+      } else {
+        selectAllMainGenres(false);
+      }
+      updateMainGenreBadge();
+
+      if (shouldFetch) {
+        fetchGigs();
+        showToast("Applied your saved defaults");
+      }
+    }
+
+    async function saveUserPreferences() {
+      const btn = document.getElementById("btnSavePrefs");
+      btn.disabled = true;
+      btn.innerText = "Saving...";
+
+      const selectedDays = [];
+      document.querySelectorAll("input[name='prefDay']:checked").forEach(cb => {
+        selectedDays.push(cb.value);
+      });
+
+      const selectedLocs = [];
+      document.querySelectorAll("input[name='prefLoc']:checked").forEach(cb => {
+        selectedLocs.push(cb.value);
+      });
+
+      const score = parseInt(document.getElementById("prefScoreSlider").value, 10);
+
+      const selectedGenres = [];
+      document.querySelectorAll("#genresCheckboxGrid input[type='checkbox']:checked").forEach(cb => {
+        selectedGenres.push(cb.value);
+      });
+
+      const isActive = document.getElementById("prefActiveToggle").checked;
+
+      const payload = {
+        chat_id: currentChatId,
+        min_score: score,
+        genres: selectedGenres,
+        locations: selectedLocs.length > 0 ? selectedLocs : ["Helsinki", "Espoo", "Vantaa"],
+        notification_days: selectedDays.length > 0 ? selectedDays : ["fri"],
+        is_active: isActive
+      };
+
+      try {
+        const res = await fetch("/api/user-preferences", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        userPreferences = data.preferences;
+
+        togglePreferencesModal();
+        applyUserPreferencesAsFilters(true);
+        showToast("Preferences saved!");
+      } catch (e) {
+        console.error("Error saving preferences:", e);
+        showToast("Failed to save preferences");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Save Preferences";
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById("nlSearch").value = "";
+      selectAllMainGenres(false);
+      document.getElementById("citySelect").value = "";
+      document.getElementById("scoreSlider").value = "0";
+      document.getElementById("scoreVal").innerText = "0%";
+      clearDates();
+      document.getElementById("sortSelect").value = "date_asc";
+      fetchGigs();
+      showToast("Filters reset");
+    }
+
+    async function handleNlSearch() {
+      const q = document.getElementById("nlSearch").value.trim();
+      if (!q) return;
+
+      const btn = document.getElementById("btnSearch");
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        Analyzing...
+      `;
+
+      try {
+        const resp = await fetch("/api/query-filter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: q })
+        });
+        const filters = await resp.json();
+
+        if (filters.genres && filters.genres.length > 0) {
+          document.querySelectorAll("#mainGenresGrid input[type='checkbox']").forEach(cb => {
+            cb.checked = filters.genres.some(fg => fg.toLowerCase().includes(cb.value.toLowerCase()) || cb.value.toLowerCase().includes(fg.toLowerCase()));
+          });
+          updateMainGenreBadge();
+        }
+        if (filters.city) {
+          document.getElementById("citySelect").value = filters.city;
+        }
+        if (filters.date_from) {
+          document.getElementById("dateFrom").value = filters.date_from;
+          onDateChanged('from');
+        }
+        if (filters.date_to) {
+          document.getElementById("dateTo").value = filters.date_to;
+          onDateChanged('to');
+        }
+        if (filters.min_score !== null && filters.min_score !== undefined) {
+          document.getElementById("scoreSlider").value = filters.min_score;
+          document.getElementById("scoreVal").innerText = filters.min_score + "%";
+        }
+
+        await fetchGigs();
+        showToast("Applied filters for your query");
+      } catch (e) {
+        console.error("NL query error:", e);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          Ask AI
+        `;
+      }
+    }
+
+    async function fetchGigs() {
+      const checkedGenres = [];
+      document.querySelectorAll("#mainGenresGrid input[type='checkbox']:checked").forEach(cb => {
+        checkedGenres.push(cb.value);
+      });
+
+      const city = document.getElementById("citySelect").value;
+      const minScore = document.getElementById("scoreSlider").value;
+      const dateFrom = document.getElementById("dateFrom").value;
+      const dateTo = document.getElementById("dateTo").value;
+      const sortBy = document.getElementById("sortSelect").value;
+
+      const params = new URLSearchParams();
+      if (checkedGenres.length > 0) {
+        params.append("genres", checkedGenres.join(","));
+      }
+      if (city) params.append("city", city);
+      if (sortBy) params.append("sort_by", sortBy);
+      if (dateFrom) params.append("date_from", dateFrom);
+      if (dateTo) params.append("date_to", dateTo);
+      params.append("min_score", minScore || 0);
+
+      const listContainer = document.getElementById("gigList");
+      listContainer.innerHTML = `
+        <div class="col-span-full py-16 text-center space-y-3">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-amber-400 border-t-transparent"></div>
+          <p class="text-sm font-medium text-slate-400">Loading upcoming gigs...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch(`/api/gigs?${params.toString()}`);
+        const gigs = await res.json();
+
+        document.getElementById("statsBadge").innerHTML = `
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>${gigs.length} upcoming</span>
+        `;
+
+        if (gigs.length === 0) {
+          listContainer.innerHTML = `
+            <div class="col-span-full bg-surface-card border border-surface-border rounded-2xl p-12 text-center space-y-3 shadow-inner">
+              <span class="text-4xl block">🎸</span>
+              <h3 class="text-base font-bold text-white">No upcoming gigs matched your criteria</h3>
+              <p class="text-xs text-slate-400 max-w-sm mx-auto">Try lowering the relevance score threshold, clearing date limits, or selecting more genres.</p>
+              <button onclick="resetFilters()" class="mt-2 bg-surface-border hover:bg-slate-800 text-amber-400 text-xs px-4 py-2 rounded-xl font-semibold transition-all">Reset All Filters</button>
+            </div>
+          `;
+          return;
+        }
+
+        listContainer.innerHTML = gigs.map(gig => {
+          const genresBadges = (gig.genres || []).map(g => 
+            `<span class="bg-[#0b0d11] text-slate-300 font-medium px-2 py-0.5 rounded-md text-[10px] border border-surface-border tracking-tight">${g}</span>`
+          ).join(" ");
+
+          const countryBadge = gig.artist_country ? 
+            `<span class="text-[11px] font-mono text-slate-400 bg-surface-border/60 px-1.5 py-0.5 rounded">${gig.artist_country}</span>` : "";
+
+          const priceBadge = gig.ticket_cost ? 
+            `<span class="text-xs font-mono font-semibold text-emerald-400 flex items-center gap-1">🎟 ${gig.ticket_cost}</span>` : "";
+
+          const ticketLink = gig.ticket_url || gig.source_url ? 
+            `<a href="${gig.ticket_url || gig.source_url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 shrink-0">
+               <span>Tickets</span>
+               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+             </a>` : "";
+
+          let scoreClasses = "bg-slate-800/80 text-slate-400 border border-slate-700/50";
+          if (gig.relevance_score >= 80) {
+            scoreClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 badge-glow-high";
+          } else if (gig.relevance_score >= 50) {
+            scoreClasses = "bg-amber-500/15 text-amber-400 border border-amber-500/30 badge-glow-mid";
+          }
+
+          const festBadge = gig.is_festival ? 
+            `<span class="bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded">Festival</span>` : "";
+
+          return `
+            <div class="bg-surface-card hover:bg-surface-cardHover border border-surface-border hover:border-slate-700 rounded-2xl p-5 shadow-md transition-all flex flex-col justify-between group">
+              <div class="space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h3 class="text-base sm:text-lg font-bold text-white group-hover:text-amber-400 transition-colors leading-tight">
+                        ${gig.artist}
+                      </h3>
+                      ${countryBadge}
+                      ${festBadge}
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                      <span class="flex items-center gap-1">📍 ${gig.venue}</span>
+                      <span>•</span>
+                      <span class="text-amber-400 font-mono font-semibold">${gig.gig_date}</span>
+                    </div>
+                  </div>
+
+                  <span class="${scoreClasses} text-xs font-mono font-bold px-2.5 py-1 rounded-lg shrink-0">
+                    ${gig.relevance_score}%
+                  </span>
+                </div>
+
+                ${gig.lineup_details ? `
+                  <div class="text-xs text-slate-300 bg-[#0b0d11]/70 p-2.5 rounded-xl border border-surface-border/80 flex items-start gap-1.5">
+                    <span class="text-slate-400 shrink-0">👥</span>
+                    <span class="leading-relaxed"><b class="text-slate-400">Lineup:</b> ${gig.lineup_details}</span>
+                  </div>
+                ` : ""}
+
+                ${gig.relevance_reason ? `
+                  <p class="text-xs text-slate-300 leading-relaxed italic border-l-2 border-amber-500/40 pl-2.5 py-0.5">
+                    "${gig.relevance_reason}"
+                  </p>
+                ` : (gig.short_description ? `<p class="text-xs text-slate-400 leading-relaxed">${gig.short_description}</p>` : "")}
+
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                  ${genresBadges}
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between pt-4 mt-4 border-t border-surface-border/70">
+                ${priceBadge || '<span class="text-xs text-slate-500">Price info at venue</span>'}
+                ${ticketLink}
+              </div>
+            </div>
+          `;
+        }).join("");
+
+      } catch (err) {
+        console.error(err);
+        listContainer.innerHTML = '<div class="col-span-full text-red-400 text-xs text-center py-12">Failed to load gigs. Check network or server connection.</div>';
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener("DOMContentLoaded", async () => {
+      await loadAvailableGenres();
+      await loadUserPreferences();
+      fetchGigs();
+    });
+  </script>
+</body>
+</html>

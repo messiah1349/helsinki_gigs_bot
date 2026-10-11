@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  helsinki-gigs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: helsinki_gigs_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - gig_data:/app/data
+
+volumes:
+  gig_data:
