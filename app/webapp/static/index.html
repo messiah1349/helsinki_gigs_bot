@@ -111,148 +111,123 @@
   <!-- Main Gigs Container -->
   <main id="gigsView" class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-    <!-- Natural Language Search Card -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-[#161922] to-[#12141c] border border-surface-border rounded-2xl p-4 sm:p-6 shadow-xl">
-      <div class="relative z-10 space-y-3">
-        <div class="flex items-center justify-between">
-          <label for="nlSearch" class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <span>✨</span> Ask AI Search
-          </label>
-          <span class="text-[11px] text-slate-400">Smart Search</span>
-        </div>
-
-        <div class="flex flex-col sm:flex-row gap-2.5">
-          <div class="relative flex-1">
-            <input
-              id="nlSearch"
-              type="text"
-              placeholder="e.g. 'doom or death metal in Tavastia' or 'any math rock shows?'"
-              class="w-full bg-surface-input border border-surface-border rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/40 transition-all font-medium"
-              onkeydown="if(event.key==='Enter') handleNlSearch()"
-            />
-          </div>
-          <button
-            onclick="handleNlSearch()"
-            id="btnSearch"
-            class="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all shadow-md shadow-amber-500/10 active:scale-[0.98] flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
-            Ask AI
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Filter & Sort Control Panel -->
-    <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-5">
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
 
-      <div class="flex items-center justify-between pb-3 border-b border-surface-border">
-        <div class="flex items-center gap-2">
-          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-200">Filters & Sorting</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <button onclick="applyUserPreferencesAsFilters()" class="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer flex items-center gap-1">
-            <span>⚙️</span> Apply Defaults
-          </button>
-          <button onclick="resetFilters()" class="text-xs text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer">
-            Reset
-          </button>
-        </div>
-      </div>
-
-      <!-- Top Row: Sort, Region, Relevance Slider -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
-
-        <!-- 1. Sort By -->
-        <div class="space-y-1">
-          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Sort Order</label>
-          <select id="sortSelect" onchange="fetchGigs()" class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400">
-            <option value="date_asc">📅 Soonest first</option>
-            <option value="date_desc">📅 Furthest first</option>
-            <option value="score_desc">🔥 Highest relevance first</option>
-            <option value="score_asc">❄️ Lowest relevance first</option>
-          </select>
-        </div>
-
-        <!-- 2. Region Filter -->
-        <div class="space-y-1">
-          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Location</label>
-          <select id="citySelect" onchange="fetchGigs()" class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400">
-            <option value="">All Regions</option>
-            <option value="Helsinki">Helsinki</option>
-            <option value="Espoo">Espoo</option>
-            <option value="Vantaa">Vantaa</option>
-          </select>
-        </div>
-
-        <!-- 3. Clean Custom Relevance Slider -->
-        <div class="space-y-1 sm:col-span-2 lg:col-span-1">
-          <div class="flex justify-between items-center text-[11px]">
-            <span class="font-semibold text-slate-400 uppercase tracking-wider">Min Relevance</span>
-            <span id="scoreVal" class="font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">40%</span>
-          </div>
-          <input
-            type="range"
-            id="scoreSlider"
-            min="0"
-            max="100"
-            value="40"
-            step="5"
-            oninput="document.getElementById('scoreVal').innerText = this.value + '%'"
-            onchange="fetchGigs();"
-            class="w-full accent-amber-400 h-1.5 bg-surface-input rounded-lg cursor-pointer mt-1"
-          />
-        </div>
-
-      </div>
-
-      <!-- Date Period: Pure Calendar Selection (No Manual Text Typing) -->
-      <div class="pt-3 border-t border-surface-border/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Time Period</span>
-
-        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <!-- Start Date Button -->
-          <div class="date-picker-btn flex-1 sm:flex-initial bg-surface-input hover:bg-slate-800/80 border border-surface-border rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all">
-            <span class="text-amber-400">📅</span>
-            <span id="dateFromLabel" class="text-slate-300 font-medium">From: Any</span>
-            <input type="date" id="dateFrom" onchange="onDateChanged('from')" />
-          </div>
-
-          <span class="text-slate-500 font-bold">→</span>
-
-          <!-- End Date Button -->
-          <div class="date-picker-btn flex-1 sm:flex-initial bg-surface-input hover:bg-slate-800/80 border border-surface-border rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all">
-            <span class="text-amber-400">📅</span>
-            <span id="dateToLabel" class="text-slate-300 font-medium">Until: Any</span>
-            <input type="date" id="dateTo" onchange="onDateChanged('to')" />
-          </div>
-
-          <!-- Quick Clear Dates Button (if selected) -->
-          <button id="btnClearDates" onclick="clearDates()" class="text-xs text-slate-400 hover:text-amber-400 px-2 py-1 transition-colors hidden">
-            ✕ Clear
-          </button>
-        </div>
-      </div>
-
-      <!-- Clean Visual Genre Filter Grid -->
-      <div class="pt-3 border-t border-surface-border/60 space-y-2">
+      <!-- Genres Section (Always visible) -->
+      <div class="space-y-2">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 cursor-pointer select-none" onclick="toggleMainGenresDropdown()">
-            <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Genres</span>
+          <div class="flex items-center gap-2 select-none">
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Genres</span>
             <span id="genreCountBadge" class="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">All</span>
-            <span id="genreToggleArrow" class="text-xs text-slate-400">▼</span>
           </div>
-          <div class="space-x-2 text-[11px]">
-            <button type="button" onclick="selectAllMainGenres(true)" class="text-amber-400 hover:underline">Select all</button>
-            <span class="text-slate-600">•</span>
-            <button type="button" onclick="selectAllMainGenres(false)" class="text-slate-400 hover:underline">Clear</button>
+          <div class="flex items-center gap-3">
+            <div class="space-x-2 text-[11px]">
+              <button type="button" onclick="selectAllMainGenres(true)" class="text-amber-400 hover:underline cursor-pointer">Select all</button>
+              <span class="text-slate-600">•</span>
+              <button type="button" onclick="selectAllMainGenres(false)" class="text-slate-400 hover:underline cursor-pointer">Clear</button>
+            </div>
+            <span class="text-slate-600 hidden sm:inline">•</span>
+            <button onclick="resetFilters()" class="text-xs text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer">
+              Reset
+            </button>
           </div>
         </div>
 
-        <div id="mainGenresGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 p-2.5 bg-surface-input rounded-xl border border-surface-border max-h-48 overflow-y-auto custom-scrollbar transition-all">
+        <div id="mainGenresGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 p-2.5 bg-surface-input rounded-xl border border-surface-border max-h-48 overflow-y-auto custom-scrollbar">
           <!-- Dynamically populated -->
         </div>
+      </div>
+
+      <!-- Expandable More Filters Toggle Button -->
+      <div class="pt-3 border-t border-surface-border/60 flex items-center justify-between cursor-pointer select-none group" onclick="toggleExtraFilters()">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300 group-hover:text-amber-400 transition-colors">
+          <span>⚙️</span>
+          <span>More Filters</span>
+          <span id="extraFiltersSummary" class="text-[10px] font-mono font-normal text-slate-500 lowercase"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="event.stopPropagation(); applyUserPreferencesAsFilters();" class="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer">
+            Apply Defaults
+          </button>
+          <span id="extraFiltersArrow" class="text-xs text-slate-400 group-hover:text-white transition-transform">▼</span>
+        </div>
+      </div>
+
+      <!-- Collapsible Container for Location, Sort, Relevance, Time Period -->
+      <div id="extraFiltersContainer" class="space-y-4 pt-1 hidden">
+
+        <!-- Controls: Sort, Region, Relevance Slider -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
+
+          <!-- 1. Sort By -->
+          <div class="space-y-1">
+            <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Sort Order</label>
+            <select id="sortSelect" onchange="fetchGigs()" class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+              <option value="date_asc">📅 Soonest first</option>
+              <option value="date_desc">📅 Furthest first</option>
+              <option value="score_desc">🔥 Highest relevance first</option>
+              <option value="score_asc">❄️ Lowest relevance first</option>
+            </select>
+          </div>
+
+          <!-- 2. Region Filter -->
+          <div class="space-y-1">
+            <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Location</label>
+            <select id="citySelect" onchange="fetchGigs()" class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400">
+              <option value="">All Regions</option>
+              <option value="Helsinki">Helsinki</option>
+              <option value="Espoo">Espoo</option>
+              <option value="Vantaa">Vantaa</option>
+            </select>
+          </div>
+
+          <!-- 3. Clean Custom Relevance Slider -->
+          <div class="space-y-1 sm:col-span-2 lg:col-span-1">
+            <div class="flex justify-between items-center text-[11px]">
+              <span class="font-semibold text-slate-400 uppercase tracking-wider">Min Relevance</span>
+              <span id="scoreVal" class="font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">40%</span>
+            </div>
+            <input
+              type="range"
+              id="scoreSlider"
+              min="0"
+              max="100"
+              value="40"
+              step="5"
+              oninput="document.getElementById('scoreVal').innerText = this.value + '%'"
+              onchange="fetchGigs();"
+              class="w-full accent-amber-400 h-1.5 bg-surface-input rounded-lg cursor-pointer mt-1"
+            />
+          </div>
+
+        </div>
+
+        <!-- Date Period: Pure Calendar Selection -->
+        <div class="pt-3 border-t border-surface-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Time Period</span>
+
+          <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div class="date-picker-btn flex-1 sm:flex-initial bg-surface-input hover:bg-slate-800/80 border border-surface-border rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all">
+              <span class="text-amber-400">📅</span>
+              <span id="dateFromLabel" class="text-slate-300 font-medium">From: Any</span>
+              <input type="date" id="dateFrom" onchange="onDateChanged('from')" />
+            </div>
+
+            <span class="text-slate-500 font-bold">→</span>
+
+            <div class="date-picker-btn flex-1 sm:flex-initial bg-surface-input hover:bg-slate-800/80 border border-surface-border rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all">
+              <span class="text-amber-400">📅</span>
+              <span id="dateToLabel" class="text-slate-300 font-medium">Until: Any</span>
+              <input type="date" id="dateTo" onchange="onDateChanged('to')" />
+            </div>
+
+            <button id="btnClearDates" onclick="clearDates()" class="text-xs text-slate-400 hover:text-amber-400 px-2 py-1 transition-colors hidden cursor-pointer">
+              ✕ Clear
+            </button>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -447,17 +422,17 @@
       modal.classList.toggle("hidden");
     }
 
-    let mainGenresOpen = true;
-    function toggleMainGenresDropdown() {
-      mainGenresOpen = !mainGenresOpen;
-      const grid = document.getElementById("mainGenresGrid");
-      const arrow = document.getElementById("genreToggleArrow");
-      if (mainGenresOpen) {
-        grid.style.display = "grid";
-        arrow.innerText = "▼";
+    let extraFiltersOpen = false;
+    function toggleExtraFilters() {
+      extraFiltersOpen = !extraFiltersOpen;
+      const container = document.getElementById("extraFiltersContainer");
+      const arrow = document.getElementById("extraFiltersArrow");
+      if (extraFiltersOpen) {
+        container.classList.remove("hidden");
+        arrow.innerText = "▲";
       } else {
-        grid.style.display = "none";
-        arrow.innerText = "▶";
+        container.classList.add("hidden");
+        arrow.innerText = "▼";
       }
     }
 
