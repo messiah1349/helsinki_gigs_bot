@@ -1,6 +1,9 @@
 # Helsinki Gigs Tracker & Telegram Bot
 
-A tool to track upcoming live gigs in the Helsinki metropolitan area (Helsinki, Espoo, Vantaa), analyze and score them using **Gemini Flash Latest** with **LangChain**, and deliver notifications via a **Telegram Bot** and interactive **Telegram Web App (TWA)**.
+A tool to track upcoming live gigs in the Helsinki metropolitan area (Helsinki, Espoo, Vantaa), analyze and classify them using **Gemini Flash Latest**, and deliver alerts via a **Telegram Bot** and interactive **Telegram Web App (TWA)**.
+
+🤖 **Live Telegram Bot**: [t.me/helsinki_post_gigs_bot](https://t.me/helsinki_post_gigs_bot) (`@helsinki_post_gigs_bot`)  
+🌐 **Live Web App**: [https://gigs.messiah1349-apps.men](https://gigs.messiah1349-apps.men)
 
 ---
 
