@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, UniqueConstraint
 from app.db.session import Base
 
 class Gig(Base):
@@ -23,10 +23,11 @@ class Gig(Base):
     ticket_url = Column(String(500), nullable=True)
     source_url = Column(String(500), nullable=True, unique=True)
     
-    # Descriptions & Relevance
+    # Descriptions & Relevance / Popularity
     short_description = Column(Text, nullable=True)
     relevance_reason = Column(Text, nullable=True)
     relevance_score = Column(Integer, default=0, index=True)  # 0 to 100
+    popularity_tier = Column(String(50), default="emerging_local", index=True) # "world_famous", "established", "emerging_local"
     
     # Lineup / Festival info
     # e.g., festival name or "Support for X", "Headliner: Y, Support: Z"
@@ -61,6 +62,7 @@ class Gig(Base):
             "short_description": self.short_description,
             "relevance_reason": self.relevance_reason,
             "relevance_score": self.relevance_score,
+            "popularity_tier": self.popularity_tier or "emerging_local",
             "lineup_details": self.lineup_details,
             "is_festival": self.is_festival,
             "is_notified": self.is_notified,
@@ -77,7 +79,8 @@ class Subscriber(Base):
     first_name = Column(String(100), nullable=True)
     
     # Personalized Notification & Default Filter Preferences
-    min_score = Column(Integer, default=40)
+    min_score = Column(Integer, default=0)
+    popularity_tiers = Column(Text, nullable=True)  # JSON list e.g. ["world_famous", "established", "emerging_local"]
     genres = Column(Text, nullable=True)            # JSON list of chosen genres e.g. ["Doom Metal", "Post-Punk"]
     location = Column(String(50), default="all")    # "all", "helsinki", "suburbia"
     notification_day = Column(String(20), default="fri") # "mon", "tue", "wed", "thu", "fri", "sat", "sun", or "any"
@@ -110,14 +113,33 @@ class Subscriber(Base):
         except Exception:
             return [self.notification_day]
 
+    def get_popularity_tiers_list(self):
+        if not self.popularity_tiers:
+            return ["world_famous", "established", "emerging_local"]
+        try:
+            return json.loads(self.popularity_tiers)
+        except Exception:
+            return ["world_famous", "established", "emerging_local"]
+
     def to_dict(self):
         return {
             "chat_id": self.chat_id,
             "username": self.username,
             "first_name": self.first_name,
             "min_score": self.min_score,
+            "popularity_tiers": self.get_popularity_tiers_list(),
             "genres": self.get_genres_list(),
             "locations": self.get_locations_list(),
             "notification_days": self.get_notification_days_list(),
             "is_active": self.is_active
         }
+
+
+class SubscriberNotifiedGig(Base):
+    __tablename__ = "subscriber_notified_gigs"
+    __table_args__ = (UniqueConstraint("subscriber_chat_id", "gig_id", name="uq_sub_gig"),)
+
+    id = Column(Integer, primary_key=True)
+    subscriber_chat_id = Column(String(100), nullable=False, index=True)
+    gig_id = Column(Integer, nullable=False, index=True)
+    sent_at = Column(DateTime, default=datetime.utcnow)

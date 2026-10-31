@@ -127,10 +127,6 @@
               <span class="text-slate-600">•</span>
               <button type="button" onclick="selectAllMainGenres(false)" class="text-slate-400 hover:underline cursor-pointer">Clear</button>
             </div>
-            <span class="text-slate-600 hidden sm:inline">•</span>
-            <button onclick="resetFilters()" class="text-xs text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer">
-              Reset
-            </button>
           </div>
         </div>
 
@@ -154,10 +150,10 @@
         </div>
       </div>
 
-      <!-- Collapsible Container for Location, Sort, Relevance, Time Period -->
+      <!-- Collapsible Container for Location, Sort, Popularity, Time Period -->
       <div id="extraFiltersContainer" class="space-y-4 pt-1 hidden">
 
-        <!-- Controls: Sort, Region, Relevance Slider -->
+        <!-- Controls: Sort, Region, Popularity Tiers -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
 
           <!-- 1. Sort By -->
@@ -166,8 +162,6 @@
             <select id="sortSelect" onchange="fetchGigs()" class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400">
               <option value="date_asc">📅 Soonest first</option>
               <option value="date_desc">📅 Furthest first</option>
-              <option value="score_desc">🔥 Highest relevance first</option>
-              <option value="score_asc">❄️ Lowest relevance first</option>
             </select>
           </div>
 
@@ -182,23 +176,23 @@
             </select>
           </div>
 
-          <!-- 3. Clean Custom Relevance Slider -->
+          <!-- 3. Popularity Tiers (3 Grades) -->
           <div class="space-y-1 sm:col-span-2 lg:col-span-1">
-            <div class="flex justify-between items-center text-[11px]">
-              <span class="font-semibold text-slate-400 uppercase tracking-wider">Min Relevance</span>
-              <span id="scoreVal" class="font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">40%</span>
+            <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Band Popularity</label>
+            <div class="grid grid-cols-3 gap-1.5 text-[11px]" id="filterPopularityTiers">
+              <label class="flex items-center justify-center p-2 rounded-xl border border-surface-border bg-surface-input cursor-pointer hover:border-amber-400/50 text-center select-none transition-all peer-checked:border-amber-400 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-400/10 shadow-sm">
+                <input type="checkbox" value="world_famous" onchange="fetchGigs()" class="sr-only peer" checked />
+                <span class="text-slate-300 font-semibold peer-checked:text-amber-400">🌍 Famous</span>
+              </label>
+              <label class="flex items-center justify-center p-2 rounded-xl border border-surface-border bg-surface-input cursor-pointer hover:border-amber-400/50 text-center select-none transition-all peer-checked:border-amber-400 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-400/10 shadow-sm">
+                <input type="checkbox" value="established" onchange="fetchGigs()" class="sr-only peer" checked />
+                <span class="text-slate-300 font-semibold peer-checked:text-amber-400">🔥 Established</span>
+              </label>
+              <label class="flex items-center justify-center p-2 rounded-xl border border-surface-border bg-surface-input cursor-pointer hover:border-amber-400/50 text-center select-none transition-all peer-checked:border-amber-400 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-400/10 shadow-sm">
+                <input type="checkbox" value="emerging_local" onchange="fetchGigs()" class="sr-only peer" checked />
+                <span class="text-slate-300 font-semibold peer-checked:text-amber-400">🌱 Rising</span>
+              </label>
             </div>
-            <input
-              type="range"
-              id="scoreSlider"
-              min="0"
-              max="100"
-              value="40"
-              step="5"
-              oninput="document.getElementById('scoreVal').innerText = this.value + '%'"
-              onchange="fetchGigs();"
-              class="w-full accent-amber-400 h-1.5 bg-surface-input rounded-lg cursor-pointer mt-1"
-            />
           </div>
 
         </div>
@@ -323,22 +317,26 @@
         </div>
       </div>
 
-      <!-- 3. Minimum Relevance Score -->
-      <div class="space-y-1.5">
-        <div class="flex justify-between items-center text-xs">
-          <label class="font-bold uppercase tracking-wider text-amber-400">Min Relevance</label>
-          <span id="prefScoreVal" class="font-mono font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">40%</span>
+      <!-- 3. Popularity Grades Preference -->
+      <div class="space-y-2">
+        <label class="text-xs font-bold uppercase tracking-wider text-amber-400 block">Band Popularity Grades</label>
+        <div class="grid grid-cols-3 gap-2 text-xs" id="prefPopularityGrid">
+          <label class="flex flex-col items-center justify-center p-2.5 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50 text-center transition-all has-[:checked]:border-amber-400 has-[:checked]:bg-amber-400/10 shadow-sm">
+            <input type="checkbox" name="prefTier" value="world_famous" class="accent-amber-400 mb-1" checked />
+            <span class="font-semibold text-slate-200">🌍 Famous</span>
+            <span class="text-[10px] text-slate-400">World icons</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2.5 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50 text-center transition-all has-[:checked]:border-amber-400 has-[:checked]:bg-amber-400/10 shadow-sm">
+            <input type="checkbox" name="prefTier" value="established" class="accent-amber-400 mb-1" checked />
+            <span class="font-semibold text-slate-200">🔥 Established</span>
+            <span class="text-[10px] text-slate-400">Touring & cult</span>
+          </label>
+          <label class="flex flex-col items-center justify-center p-2.5 bg-surface-input border border-surface-border rounded-xl cursor-pointer hover:border-amber-400/50 text-center transition-all has-[:checked]:border-amber-400 has-[:checked]:bg-amber-400/10 shadow-sm">
+            <input type="checkbox" name="prefTier" value="emerging_local" class="accent-amber-400 mb-1" checked />
+            <span class="font-semibold text-slate-200">🌱 Rising</span>
+            <span class="text-[10px] text-slate-400">Local talents</span>
+          </label>
         </div>
-        <input
-          type="range"
-          id="prefScoreSlider"
-          min="10"
-          max="95"
-          value="40"
-          step="5"
-          oninput="document.getElementById('prefScoreVal').innerText = this.value + '%'"
-          class="w-full accent-amber-400 h-1.5 bg-surface-input rounded-lg cursor-pointer"
-        />
       </div>
 
       <!-- 4. Target Genres -->
@@ -549,9 +547,10 @@
         cb.checked = locs.includes(cb.value);
       });
 
-      const score = prefs.min_score !== undefined ? prefs.min_score : 40;
-      document.getElementById("prefScoreSlider").value = score;
-      document.getElementById("prefScoreVal").innerText = score + "%";
+      const tiers = prefs.popularity_tiers || ["world_famous", "established", "emerging_local"];
+      document.querySelectorAll("input[name='prefTier']").forEach(cb => {
+        cb.checked = tiers.includes(cb.value);
+      });
 
       const userGenres = prefs.genres || [];
       document.querySelectorAll("#genresCheckboxGrid input[type='checkbox']").forEach(cb => {
@@ -562,10 +561,10 @@
     function applyUserPreferencesAsFilters(shouldFetch = true) {
       if (!userPreferences) return;
 
-      if (userPreferences.min_score !== undefined) {
-        document.getElementById("scoreSlider").value = userPreferences.min_score;
-        document.getElementById("scoreVal").innerText = userPreferences.min_score + "%";
-      }
+      const tiers = userPreferences.popularity_tiers || ["world_famous", "established", "emerging_local"];
+      document.querySelectorAll("#filterPopularityTiers input[type='checkbox']").forEach(cb => {
+        cb.checked = tiers.includes(cb.value);
+      });
 
       if (userPreferences.locations && userPreferences.locations.length === 1) {
         document.getElementById("citySelect").value = userPreferences.locations[0];
@@ -604,7 +603,10 @@
         selectedLocs.push(cb.value);
       });
 
-      const score = parseInt(document.getElementById("prefScoreSlider").value, 10);
+      const selectedTiers = [];
+      document.querySelectorAll("input[name='prefTier']:checked").forEach(cb => {
+        selectedTiers.push(cb.value);
+      });
 
       const selectedGenres = [];
       document.querySelectorAll("#genresCheckboxGrid input[type='checkbox']:checked").forEach(cb => {
@@ -615,7 +617,7 @@
 
       const payload = {
         chat_id: currentChatId,
-        min_score: score,
+        popularity_tiers: selectedTiers.length > 0 ? selectedTiers : ["world_famous", "established", "emerging_local"],
         genres: selectedGenres,
         locations: selectedLocs.length > 0 ? selectedLocs : ["Helsinki", "Espoo", "Vantaa"],
         notification_days: selectedDays.length > 0 ? selectedDays : ["fri"],
@@ -644,72 +646,13 @@
     }
 
     function resetFilters() {
-      document.getElementById("nlSearch").value = "";
       selectAllMainGenres(false);
       document.getElementById("citySelect").value = "";
-      document.getElementById("scoreSlider").value = "0";
-      document.getElementById("scoreVal").innerText = "0%";
+      document.querySelectorAll("#filterPopularityTiers input[type='checkbox']").forEach(cb => cb.checked = true);
       clearDates();
       document.getElementById("sortSelect").value = "date_asc";
       fetchGigs();
       showToast("Filters reset");
-    }
-
-    async function handleNlSearch() {
-      const q = document.getElementById("nlSearch").value.trim();
-      if (!q) return;
-
-      const btn = document.getElementById("btnSearch");
-      btn.disabled = true;
-      btn.innerHTML = `
-        <svg class="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-        </svg>
-        Analyzing...
-      `;
-
-      try {
-        const resp = await fetch("/api/query-filter", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: q })
-        });
-        const filters = await resp.json();
-
-        if (filters.genres && filters.genres.length > 0) {
-          document.querySelectorAll("#mainGenresGrid input[type='checkbox']").forEach(cb => {
-            cb.checked = filters.genres.some(fg => fg.toLowerCase().includes(cb.value.toLowerCase()) || cb.value.toLowerCase().includes(fg.toLowerCase()));
-          });
-          updateMainGenreBadge();
-        }
-        if (filters.city) {
-          document.getElementById("citySelect").value = filters.city;
-        }
-        if (filters.date_from) {
-          document.getElementById("dateFrom").value = filters.date_from;
-          onDateChanged('from');
-        }
-        if (filters.date_to) {
-          document.getElementById("dateTo").value = filters.date_to;
-          onDateChanged('to');
-        }
-        if (filters.min_score !== null && filters.min_score !== undefined) {
-          document.getElementById("scoreSlider").value = filters.min_score;
-          document.getElementById("scoreVal").innerText = filters.min_score + "%";
-        }
-
-        await fetchGigs();
-        showToast("Applied filters for your query");
-      } catch (e) {
-        console.error("NL query error:", e);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
-          Ask AI
-        `;
-      }
     }
 
     async function fetchGigs() {
@@ -718,8 +661,12 @@
         checkedGenres.push(cb.value);
       });
 
+      const checkedTiers = [];
+      document.querySelectorAll("#filterPopularityTiers input[type='checkbox']:checked").forEach(cb => {
+        checkedTiers.push(cb.value);
+      });
+
       const city = document.getElementById("citySelect").value;
-      const minScore = document.getElementById("scoreSlider").value;
       const dateFrom = document.getElementById("dateFrom").value;
       const dateTo = document.getElementById("dateTo").value;
       const sortBy = document.getElementById("sortSelect").value;
@@ -728,11 +675,13 @@
       if (checkedGenres.length > 0) {
         params.append("genres", checkedGenres.join(","));
       }
+      if (checkedTiers.length > 0 && checkedTiers.length < 3) {
+        params.append("popularity", checkedTiers.join(","));
+      }
       if (city) params.append("city", city);
       if (sortBy) params.append("sort_by", sortBy);
       if (dateFrom) params.append("date_from", dateFrom);
       if (dateTo) params.append("date_to", dateTo);
-      params.append("min_score", minScore || 0);
 
       const listContainer = document.getElementById("gigList");
       listContainer.innerHTML = `
@@ -756,12 +705,18 @@
             <div class="col-span-full bg-surface-card border border-surface-border rounded-2xl p-12 text-center space-y-3 shadow-inner">
               <span class="text-4xl block">🎸</span>
               <h3 class="text-base font-bold text-white">No upcoming gigs matched your criteria</h3>
-              <p class="text-xs text-slate-400 max-w-sm mx-auto">Try lowering the relevance score threshold, clearing date limits, or selecting more genres.</p>
+              <p class="text-xs text-slate-400 max-w-sm mx-auto">Try selecting more genres or popularity grades.</p>
               <button onclick="resetFilters()" class="mt-2 bg-surface-border hover:bg-slate-800 text-amber-400 text-xs px-4 py-2 rounded-xl font-semibold transition-all">Reset All Filters</button>
             </div>
           `;
           return;
         }
+
+        const TIER_CONFIG = {
+          "world_famous": { label: "🌍 World Famous", classes: "bg-purple-500/15 text-purple-300 border border-purple-500/30" },
+          "established": { label: "🔥 Established", classes: "bg-amber-500/15 text-amber-300 border border-amber-500/30" },
+          "emerging_local": { label: "🌱 Local & Rising", classes: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" }
+        };
 
         listContainer.innerHTML = gigs.map(gig => {
           const genresBadges = (gig.genres || []).map(g => 
@@ -780,15 +735,10 @@
                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
              </a>` : "";
 
-          let scoreClasses = "bg-slate-800/80 text-slate-400 border border-slate-700/50";
-          if (gig.relevance_score >= 80) {
-            scoreClasses = "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 badge-glow-high";
-          } else if (gig.relevance_score >= 50) {
-            scoreClasses = "bg-amber-500/15 text-amber-400 border border-amber-500/30 badge-glow-mid";
-          }
+          const tier = TIER_CONFIG[gig.popularity_tier] || TIER_CONFIG["emerging_local"];
 
           const festBadge = gig.is_festival ? 
-            `<span class="bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded">Festival</span>` : "";
+            `<span class="bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded">Festival</span>` : "";
 
           return `
             <div class="bg-surface-card hover:bg-surface-cardHover border border-surface-border hover:border-slate-700 rounded-2xl p-5 shadow-md transition-all flex flex-col justify-between group">
@@ -809,8 +759,8 @@
                     </div>
                   </div>
 
-                  <span class="${scoreClasses} text-xs font-mono font-bold px-2.5 py-1 rounded-lg shrink-0">
-                    ${gig.relevance_score}%
+                  <span class="${tier.classes} text-[11px] font-semibold px-2.5 py-1 rounded-lg shrink-0 select-none">
+                    ${tier.label}
                   </span>
                 </div>
 
@@ -851,6 +801,14 @@
       await loadAvailableGenres();
       await loadUserPreferences();
       fetchGigs();
+
+      // Check URL query param to open preferences directly (e.g. ?open=alerts)
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("open") === "alerts" || urlParams.get("tab") === "alerts") {
+        setTimeout(() => {
+          togglePreferencesModal();
+        }, 150);
+      }
     });
   </script>
 </body>

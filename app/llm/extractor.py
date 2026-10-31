@@ -10,6 +10,7 @@ class EventEnrichment(BaseModel):
     artist: str = Field(default="", description="Normalized main artist name or festival title")
     artist_country: Optional[str] = Field(None, description="Country of origin of artist if known (e.g. FI, US, UK, SE)")
     genres: List[str] = Field(default_factory=list, description="List of recognized genres")
+    popularity_tier: str = Field("emerging_local", description="Tier within their genre: 'world_famous', 'established', or 'emerging_local'")
     relevance_score: int = Field(0, description="Relevance score from 0 to 100 based on user's target genres")
     relevance_reason: str = Field("", description="Concise explanation why it is or isn't relevant to user's taste")
     short_description: str = Field("", description="Short 1-2 sentence description of the musical style and band")
@@ -25,6 +26,11 @@ User Taste Profile (Highly relevant genres):
 - Rock / Alternative / Indie: Indie Rock, Progressive Rock, Art Rock, Post-Rock, Noise Rock, Math Rock, Stoner Rock, Psychedelic Rock, Alternative Rock, Grunge, Shoegaze, Darkwave
 - Acoustic: Singer-Songwriters, Dark Folk, Acoustic
 
+Popularity Tiers (Evaluate within the band's musical genre and scene):
+1. "world_famous": Internationally renowned icons, global headliners within their genre, major arena/festival headliners (e.g. Bruce Dickinson, Ghost, Bring Me The Horizon, Turnstile, The Smile, Fontaines D.C., Sleep Token).
+2. "established": Recognized national or international touring acts, scene veterans, established cult-following bands with multiple albums/tours (e.g. The Ocean, Terveet Kädet, Krallice, Huora, The Chats, Haken).
+3. "emerging_local": Young local talents, up-and-coming indie/underground bands, local club openers, newer demo/EP acts.
+
 Scoring criteria (relevance_score from 0 to 100):
 - 80 - 100: Direct hit in user's core genres (e.g., Hardcore, Post-Hardcore, Screamo, Emo, Punk, Pop-Punk, Post-Punk, Post-Metal, Post-Rock, Doom, Progressive Metal, Avantgarde, Math Rock, Indie Rock, Shoegaze).
 - 50 - 79: Adjacent or highly interesting alternative/indie/heavy genres (e.g., Psychedelic Rock, Stoner Rock, Heavy Metal, Thrash Metal, Folk, Dark Ambient, Industrial, Death Metal, Grunge, Hard Rock).
@@ -36,6 +42,7 @@ Output JSON schema strictly matching:
   "artist": "Normalized artist or event name",
   "artist_country": "Country code or name or null",
   "genres": ["Genre1", "Genre2"],
+  "popularity_tier": "world_famous" | "established" | "emerging_local",
   "relevance_score": integer 0-100,
   "relevance_reason": "Concise reason why it fits or does not fit",
   "short_description": "Short 1-2 sentence summary of style",

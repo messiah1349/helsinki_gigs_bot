@@ -2,6 +2,7 @@ import logging
 from aiogram import Router, F
 from aiogram.types import (
     Message,
+    CallbackQuery,
     WebAppInfo,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
@@ -92,16 +93,15 @@ async def handle_start(message: Message):
         "• Rock & Underground: Indie Rock, Post-Rock, Math Rock, Grunge, Shoegaze, Darkwave\n"
         "• Acoustic: Singer-Songwriters, Folk, Dark Ambient\n\n"
         "✨ <b>What you can do:</b>\n"
-        "📱 <b>Open the Web App</b> (tap <b>🎸 Gigs App</b> in bottom menu or button below) to:\n"
-        "  — Filter by multiple genres & locations\n"
-        "  — Select exact date ranges using calendar buttons\n"
-        "  — Adjust minimum relevance match % with a live slider\n"
-        "  — Set your custom <b>🔔 Weekly Alert Days & Preferences</b>\n\n"
+        "📱 <b>Open the Web App</b> (tap the button below or <b>🎸 Gigs App</b> in the bottom menu) to:\n"
+        "  — Filter concerts by genres & popularity grades\n"
+        "  — Pick dates using the visual calendar\n"
+        "  — Configure your <b>🔔 Weekly Alerts</b>\n\n"
         "💬 <b>Ask in plain English or Finnish</b> anytime in this chat (e.g. <i>'any indie rock, punk or hardcore gigs next weekend?'</i>) and I will find them for you!"
     )
     await message.answer(
         welcome_text,
-        reply_markup=get_persistent_reply_keyboard(),
+        reply_markup=get_main_keyboard(),
         parse_mode="HTML"
     )
 
@@ -109,8 +109,8 @@ async def handle_start(message: Message):
 async def handle_help(message: Message):
     help_text = (
         "🔍 <b>Helsinki Gigs Bot Commands:</b>\n\n"
-        "/start - Register for updates & open web app\n"
-        "/gigs - List top upcoming relevant gigs\n"
+        "/start - Register & launch Gig Finder\n"
+        "/alerts - View alert status, toggle on/off & edit preferences\n"
         "/help - Show this guide\n\n"
         "💡 <b>Tip:</b> You can write plain text in English or Finnish like:\n"
         "• <i>'show me math rock and screamo shows'</i>\n"
@@ -119,18 +119,104 @@ async def handle_help(message: Message):
     )
     await message.answer(help_text, reply_markup=get_main_keyboard(), parse_mode="HTML")
 
-@router.message(Command("gigs"))
-async def handle_gigs(message: Message):
+DAY_NAMES_MAP = {
+    "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"
+}
+
+TIER_NAMES_MAP = {
+    "world_famous": "🌍 World Famous",
+    "established": "🔥 Established",
+    "emerging_local": "🌱 Local & Rising"
+}
+
+def get_alerts_keyboard(is_active: bool) -> InlineKeyboardMarkup:
+    toggle_text = "🔴 Deactivate Alerts" if is_active else "🟢 Activate Alerts"
+    toggle_data = "alerts_toggle_off" if is_active else "alerts_toggle_on"
+    alerts_url = f"{settings.WEBAPP_URL}?open=alerts"
+
+    kb = [
+        [
+            InlineKeyboardButton(text=toggle_text, callback_data=toggle_data)
+        ],
+        [
+            InlineKeyboardButton(
+                text="⚙️ Alert Settings (Web App)",
+                web_app=WebAppInfo(url=alerts_url)
+            )
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+def build_alerts_status_text(sub: Subscriber) -> str:
+    status_emoji = "🟢 <b>ACTIVE</b>" if sub.is_active else "🔴 <b>DEACTIVATED</b>"
+    
+    # Days
+    days = sub.get_notification_days_list()
+    days_str = ", ".join(DAY_NAMES_MAP.get(d, d.upper()) for d in days) if days else "None"
+    
+    # Locations
+    locs = sub.get_locations_list()
+    locs_str = ", ".join(locs) if locs else "All"
+
+    # Popularity
+    tiers = sub.get_popularity_tiers_list()
+    tiers_str = ", ".join(TIER_NAMES_MAP.get(t, t) for t in tiers) if tiers else "All"
+
+    # Genres
+    genres = sub.get_genres_list()
+    genres_str = ", ".join(genres) if genres else "All genres"
+
+    text = (
+        f"🔔 <b>Gig Alerts Status:</b> {status_emoji}\n\n"
+        f"📅 <b>Alert Days:</b> {days_str}\n"
+        f"📍 <b>Locations:</b> {locs_str}\n"
+        f"⭐ <b>Popularity:</b> {tiers_str}\n"
+        f"🏷 <b>Genres:</b> {genres_str}\n\n"
+        "<i>Use the buttons below to toggle alerts or open Settings to customize filters:</i>"
+    )
+    return text
+
+@router.message(Command("alerts"))
+async def handle_alerts(message: Message):
+    chat_id = str(message.chat.id)
     async with async_session() as session:
-        query = select(Gig).where(Gig.relevance_score >= settings.MIN_RELEVANCE_SCORE).order_by(Gig.gig_date.asc()).limit(5)
-        gigs = (await session.execute(query)).scalars().all()
+        sub = (await session.execute(select(Subscriber).where(Subscriber.chat_id == chat_id))).scalars().first()
+        if not sub:
+            sub = Subscriber(
+                chat_id=chat_id,
+                username=message.from_user.username if message.from_user else None,
+                first_name=message.from_user.first_name if message.from_user else None,
+                is_active=False
+            )
+            session.add(sub)
+            await session.commit()
+            await session.refresh(sub)
 
-        if not gigs:
-            await message.answer("No upcoming gigs found matching your taste profile yet. Run parser update!")
-            return
+        text = build_alerts_status_text(sub)
+        kb = get_alerts_keyboard(sub.is_active)
+        await message.answer(text, reply_markup=kb, parse_mode="HTML")
 
-        for gig in gigs:
-            await message.answer(format_gig_message(gig), parse_mode="HTML", disable_web_page_preview=True)
+@router.callback_query(F.data.startswith("alerts_toggle_"))
+async def handle_alerts_toggle(callback: CallbackQuery):
+    chat_id = str(callback.message.chat.id)
+    target_state = callback.data == "alerts_toggle_on"
+
+    async with async_session() as session:
+        sub = (await session.execute(select(Subscriber).where(Subscriber.chat_id == chat_id))).scalars().first()
+        if sub:
+            sub.is_active = target_state
+            await session.commit()
+            await session.refresh(sub)
+
+            text = build_alerts_status_text(sub)
+            kb = get_alerts_keyboard(sub.is_active)
+            try:
+                await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+            except Exception:
+                pass
+
+    status_word = "activated 🟢" if target_state else "deactivated 🔴"
+    await callback.answer(f"Alerts {status_word}!")
 
 @router.message(F.text)
 async def handle_natural_language_query(message: Message):

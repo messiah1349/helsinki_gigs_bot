@@ -12,7 +12,8 @@ api_router = APIRouter(prefix="/api")
 
 class SubscriberPreferencesUpdate(BaseModel):
     chat_id: str
-    min_score: int = 40
+    min_score: int = 0
+    popularity_tiers: List[str] = ["world_famous", "established", "emerging_local"]
     genres: List[str] = []
     locations: List[str] = ["Helsinki", "Espoo", "Vantaa"]
     notification_days: List[str] = ["fri"]
@@ -25,7 +26,8 @@ async def get_user_preferences(chat_id: str, db: AsyncSession = Depends(get_db))
     if not sub:
         return {
             "chat_id": chat_id,
-            "min_score": 40,
+            "min_score": 0,
+            "popularity_tiers": ["world_famous", "established", "emerging_local"],
             "genres": [],
             "locations": ["Helsinki", "Espoo", "Vantaa"],
             "notification_days": ["fri"],
@@ -40,11 +42,13 @@ async def save_user_preferences(payload: SubscriberPreferencesUpdate, db: AsyncS
     loc_json = json.dumps(payload.locations)
     days_json = json.dumps(payload.notification_days)
     genres_json = json.dumps(payload.genres)
+    tiers_json = json.dumps(payload.popularity_tiers)
 
     if not sub:
         sub = Subscriber(
             chat_id=payload.chat_id,
             min_score=payload.min_score,
+            popularity_tiers=tiers_json,
             genres=genres_json,
             location=loc_json,
             notification_day=days_json,
@@ -53,6 +57,7 @@ async def save_user_preferences(payload: SubscriberPreferencesUpdate, db: AsyncS
         db.add(sub)
     else:
         sub.min_score = payload.min_score
+        sub.popularity_tiers = tiers_json
         sub.genres = genres_json
         sub.location = loc_json
         sub.notification_day = days_json
@@ -73,6 +78,7 @@ from datetime import datetime, date
 async def get_gigs(
     genre: Optional[str] = None,
     genres: Optional[str] = None, # comma-separated list of genres e.g. "Doom Metal,Post-Punk"
+    popularity: Optional[str] = None, # comma-separated list e.g. "world_famous,established"
     city: Optional[str] = None,
     min_score: int = Query(0, ge=0, le=100),
     max_score: Optional[int] = Query(None, ge=0, le=100),
@@ -85,6 +91,11 @@ async def get_gigs(
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(Gig).where(Gig.relevance_score >= min_score)
+
+    if popularity:
+        selected_tiers = [t.strip().lower() for t in popularity.split(",") if t.strip()]
+        if selected_tiers:
+            stmt = stmt.where(Gig.popularity_tier.in_(selected_tiers))
 
     # Filter out past events by default: only show gigs on or after today
     today_str = date.today().isoformat()

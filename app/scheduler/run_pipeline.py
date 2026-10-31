@@ -17,18 +17,16 @@ async def main():
     await init_db()
 
     logger.info("Executing gig parser and enrichment pipeline...")
-    new_gigs = await run_parsers_and_enrich()
+    await run_parsers_and_enrich()
 
     bot = get_bot()
-    if bot and new_gigs:
-        logger.info(f"Broadcasting {len(new_gigs)} new gigs to subscribers...")
+    if bot:
+        logger.info("Checking and dispatching scheduled alerts to active subscribers...")
         try:
-            await send_new_gigs_notification(bot, new_gigs)
+            from app.bot.notifications import dispatch_scheduled_alerts
+            await dispatch_scheduled_alerts(bot)
         finally:
             await bot.session.close()
-    elif bot:
-        logger.info("No new relevant gigs to broadcast.")
-        await bot.session.close()
 
     logger.info("Pipeline execution complete.")
 
