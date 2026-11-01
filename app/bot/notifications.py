@@ -17,38 +17,32 @@ TIER_BADGES = {
     "emerging_local": "🌱 Local & Rising"
 }
 
-def get_alert_message_keyboard(gig: Gig) -> InlineKeyboardMarkup:
-    alerts_url = f"{settings.WEBAPP_URL}?open=alerts"
-    kb = []
-    
-    # Row 1: Ticket link if available
+def get_gig_ticket_keyboard(gig: Gig) -> Optional[InlineKeyboardMarkup]:
     ticket_url = gig.ticket_url or gig.source_url
-    if ticket_url:
-        kb.append([InlineKeyboardButton(text="🎟 Get Tickets & Info", url=ticket_url)])
-
-    # Row 2: Manage alerts (Deactivate + Settings)
-    kb.append([
-        InlineKeyboardButton(text="🔴 Deactivate Alerts", callback_data="alerts_toggle_off"),
-        InlineKeyboardButton(text="⚙️ Alert Settings", web_app=WebAppInfo(url=alerts_url))
+    if not ticket_url:
+        return None
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎟 Get Tickets & Info", url=ticket_url)]
     ])
-    return InlineKeyboardMarkup(inline_keyboard=kb)
 
-def format_gig_message(gig: Gig, since_date: Optional[str] = None, to_date: Optional[str] = None) -> str:
+def get_alert_management_keyboard() -> InlineKeyboardMarkup:
+    alerts_url = f"{settings.WEBAPP_URL}?open=alerts"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🔴 Deactivate Alerts", callback_data="alerts_toggle_off"),
+            InlineKeyboardButton(text="⚙️ Alert Settings", web_app=WebAppInfo(url=alerts_url))
+        ]
+    ])
+
+def format_gig_message(gig: Gig) -> str:
     genres = ", ".join(gig.get_genres_list()) or "Rock/Metal"
     country_badge = f" ({gig.artist_country})" if gig.artist_country else ""
     tier_label = TIER_BADGES.get(gig.popularity_tier, "🌱 Local & Rising")
     price_info = f"💶 <b>Tickets:</b> {gig.ticket_cost}\n" if gig.ticket_cost else ""
     lineup_info = f"👥 <b>Lineup / Support:</b> {gig.lineup_details}\n" if gig.lineup_details else ""
     fest_info = "🎪 <b>Festival / Special Event</b>\n" if gig.is_festival else ""
-    
-    header = ""
-    if since_date and to_date:
-        header = f"📣 <i>New gig announced between {since_date} and {to_date}:</i>\n\n"
-    elif since_date:
-        header = f"📣 <i>New gig announced since {since_date}:</i>\n\n"
 
     msg = (
-        f"{header}"
         f"🎸 <b>{gig.artist}</b>{country_badge}\n"
         f"📅 <b>Date:</b> {gig.gig_date}\n"
         f"📍 <b>Venue:</b> {gig.venue} ({gig.city})\n"
@@ -162,9 +156,29 @@ async def dispatch_scheduled_alerts(bot: Bot):
                 from datetime import timedelta
                 since_formatted = (date.today() - timedelta(days=7)).strftime("%d.%m.%Y")
 
+            # Send single introductory announcement message
+            intro_text = (
+                f"📣 <b>New gig announcements ({since_formatted} – {today_formatted}):</b>\n\n"
+                f"Found <b>{len(matching_gigs)}</b> new show(s) matching your taste profile:"
+            )
+            try:
+                await bot.send_message(
+                    chat_id=sub.chat_id,
+                    text=intro_text,
+                    parse_mode="HTML"
+                )
+            except TelegramForbiddenError:
+                logger.warning(f"User {sub.chat_id} blocked bot. Deactivating.")
+                sub.is_active = False
+                await session.commit()
+                continue
+            except Exception as e:
+                logger.error(f"Failed to send intro to {sub.chat_id}: {e}")
+
+            sent_count = 0
             for gig in matching_gigs:
-                text = format_gig_message(gig, since_date=since_formatted, to_date=today_formatted)
-                kb = get_alert_message_keyboard(gig)
+                text = format_gig_message(gig)
+                kb = get_gig_ticket_keyboard(gig)
 
                 try:
                     await bot.send_message(
@@ -178,6 +192,7 @@ async def dispatch_scheduled_alerts(bot: Bot):
                     session.add(SubscriberNotifiedGig(subscriber_chat_id=sub.chat_id, gig_id=gig.id))
                     sub.last_notified_at = datetime.utcnow()
                     await session.commit()
+                    sent_count += 1
                 except TelegramForbiddenError:
                     logger.warning(f"User {sub.chat_id} blocked bot. Deactivating.")
                     sub.is_active = False
@@ -193,6 +208,22 @@ async def dispatch_scheduled_alerts(bot: Bot):
                         logger.error(f"Telegram BadRequest for {sub.chat_id}: {e}")
                 except Exception as e:
                     logger.error(f"Failed to send gig #{gig.id} to {sub.chat_id}: {e}")
+
+            # Send alert summary & settings controls only at the very end of the batch
+            if sent_count > 0:
+                summary_text = (
+                    f"✅ <i>That's all {sent_count} new matching gig(s) for today!</i>\n"
+                    "Manage your subscription or customize preferences below:"
+                )
+                try:
+                    await bot.send_message(
+                        chat_id=sub.chat_id,
+                        text=summary_text,
+                        reply_markup=get_alert_management_keyboard(),
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send alert summary to {sub.chat_id}: {e}")
 
 async def send_new_gigs_notification(bot: Bot, gigs: List[Gig]):
     """Compatibility wrapper that calls dispatch_scheduled_alerts."""

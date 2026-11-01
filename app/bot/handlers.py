@@ -14,7 +14,7 @@ from aiogram.filters import CommandStart, Command, ChatMemberUpdatedFilter, KICK
 from sqlalchemy import select
 from app.db.session import async_session
 from app.db.models import Subscriber, Gig
-from app.bot.notifications import format_gig_message
+from app.bot.notifications import format_gig_message, get_gig_ticket_keyboard
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -105,19 +105,7 @@ async def handle_start(message: Message):
         parse_mode="HTML"
     )
 
-@router.message(Command("help"))
-async def handle_help(message: Message):
-    help_text = (
-        "🔍 <b>Helsinki Gigs Bot Commands:</b>\n\n"
-        "/start - Register & launch Gig Finder\n"
-        "/alerts - View alert status, toggle on/off & edit preferences\n"
-        "/help - Show this guide\n\n"
-        "💡 <b>Tip:</b> You can write plain text in English or Finnish like:\n"
-        "• <i>'show me math rock and screamo shows'</i>\n"
-        "• <i>'what is playing at Tavastia or Kuudes Linja in November?'</i>\n"
-        "• <i>'acoustic folk gigs under 25 euros'</i>"
-    )
-    await message.answer(help_text, reply_markup=get_main_keyboard(), parse_mode="HTML")
+
 
 DAY_NAMES_MAP = {
     "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"
@@ -273,4 +261,10 @@ async def handle_natural_language_query(message: Message):
 
         await message.answer(f"🎯 Found {len(results)} matching gig(s):", parse_mode="HTML")
         for gig in results:
-            await message.answer(format_gig_message(gig), parse_mode="HTML", disable_web_page_preview=True)
+            kb = get_gig_ticket_keyboard(gig)
+            await message.answer(
+                format_gig_message(gig),
+                reply_markup=kb,
+                parse_mode="HTML",
+                disable_web_page_preview=True
+            )
